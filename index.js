@@ -98,16 +98,17 @@ bot.onText(/\/ref/, (msg) => {
     return;
   }
 
-  const link = `https://t.me/${process.env.BOT_USERNAME}?start=${userId}`;
+  // 🔍 CEK ENV
+  console.log("BOT_USERNAME ENV =", process.env.BOT_USERNAME);
 
+  const link = `https://t.me/${process.env.BOT_USERNAME}?start=${userId}`;
 
   bot.sendMessage(
     msg.chat.id,
 `👥 *Referral kamu*
 ${link}
 
-🎁 Bonus referral: +500 Chip
-👤 Total referral: ${users[userId].refCount}`,
+🎁 Bonus referral: +500 Chip`,
     { parse_mode: "Markdown" }
   );
 });
