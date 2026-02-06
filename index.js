@@ -98,7 +98,8 @@ bot.onText(/\/ref/, (msg) => {
     return;
   }
 
-  const link = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+  const link = `https://t.me/${process.env.BOT_USERNAME}?start=${userId}`;
+
 
   bot.sendMessage(
     msg.chat.id,
