@@ -1,6 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
 
 const token = process.env.BOT_TOKEN;
+const BOT_NAME = process.env.BOT_NAME;
+const BOT_USERNAME = process.env.BOT_USERNAME;
+
 const bot = new TelegramBot(token, { polling: true });
 
 let users = {};
@@ -18,14 +21,16 @@ bot.onText(/\/start(?:\s+(\d+))?/, (msg, match) => {
       refCount: 0
     };
 
-    if (ref && users[ref]) {
+    // referral bonus
+    if (ref && users[ref] && ref !== userId) {
       users[ref].chip += 500;
       users[ref].refCount += 1;
     }
   }
 
-  bot.sendMessage(chatId,
-`🃏 Selamat datang di QiuQiu Bot!
+  bot.sendMessage(
+    chatId,
+`🃏 Selamat datang di *${BOT_NAME}*!
 
 💰 Chip: ${users[userId].chip}
 
@@ -33,7 +38,9 @@ Perintah:
 /spin
 /daily
 /ref
-/leaderboard`);
+/leaderboard`,
+    { parse_mode: "Markdown" }
+  );
 });
 
 // /spin
@@ -63,6 +70,12 @@ bot.onText(/\/spin/, (msg) => {
 bot.onText(/\/daily/, (msg) => {
   const userId = msg.from.id.toString();
   const chatId = msg.chat.id;
+
+  if (!users[userId]) {
+    bot.sendMessage(chatId, "Ketik /start dulu");
+    return;
+  }
+
   const now = Date.now();
 
   if (now - users[userId].lastDaily < 86400000) {
@@ -79,14 +92,23 @@ bot.onText(/\/daily/, (msg) => {
 // /ref
 bot.onText(/\/ref/, (msg) => {
   const userId = msg.from.id.toString();
-  const link = `https://t.me/NamaBotKamu?start=${userId}`;
 
-  bot.sendMessage(msg.chat.id,
-`👥 Referral kamu:
+  if (!users[userId]) {
+    bot.sendMessage(msg.chat.id, "Ketik /start dulu");
+    return;
+  }
+
+  const link = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+
+  bot.sendMessage(
+    msg.chat.id,
+`👥 *Referral kamu*
 ${link}
 
-🎁 Bonus: +500 Chip
-👤 Total referral: ${users[userId]?.refCount || 0}`);
+🎁 Bonus referral: +500 Chip
+👤 Total referral: ${users[userId].refCount}`,
+    { parse_mode: "Markdown" }
+  );
 });
 
 // /leaderboard
@@ -94,9 +116,14 @@ bot.onText(/\/leaderboard/, (msg) => {
   const lb = Object.entries(users)
     .sort((a, b) => b[1].chip - a[1].chip)
     .slice(0, 5)
-    .map((u, i) => `${i+1}. ${u[0]} — ${u[1].chip} 💰`)
+    .map((u, i) => `${i + 1}. ${u[0]} — ${u[1].chip} 💰`)
     .join("\n");
 
-  bot.sendMessage(msg.chat.id,
-`🏆 LEADERBOARD\n\n${lb || "Belum ada data"}`);
+  bot.sendMessage(
+    msg.chat.id,
+`🏆 *LEADERBOARD*\n\n${lb || "Belum ada data"}`,
+    { parse_mode: "Markdown" }
+  );
 });
+
+console.log("Bot running:", BOT_NAME);
