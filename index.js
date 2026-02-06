@@ -1,65 +1,102 @@
-import express from "express";
-import cors from "cors";
+import TelegramBot from "node-telegram-bot-api";
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const PORT = process.env.PORT || 3000;
+const token = process.env.BOT_TOKEN;
+const bot = new TelegramBot(token, { polling: true });
 
 let users = {};
 
-app.get("/", (req, res) => {
-  res.send("Backend QiuQiu BOT aktif ✅");
-});
-
-app.post("/api/register", (req, res) => {
-  const { userId, ref } = req.body;
+// /start + referral
+bot.onText(/\/start(?:\s+(\d+))?/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id.toString();
+  const ref = match[1];
 
   if (!users[userId]) {
     users[userId] = {
-      coins: 100,
-      referrals: 0
+      chip: 1000,
+      lastDaily: 0,
+      refCount: 0
     };
 
     if (ref && users[ref]) {
-      users[ref].coins += 50;
-      users[ref].referrals += 1;
+      users[ref].chip += 500;
+      users[ref].refCount += 1;
     }
   }
 
-  res.json({ success: true, user: users[userId] });
+  bot.sendMessage(chatId,
+`🃏 Selamat datang di QiuQiu Bot!
+
+💰 Chip: ${users[userId].chip}
+
+Perintah:
+/spin
+/daily
+/ref
+/leaderboard`);
 });
 
-app.post("/api/spin", (req, res) => {
-  const { userId } = req.body;
+// /spin
+bot.onText(/\/spin/, (msg) => {
+  const userId = msg.from.id.toString();
+  const chatId = msg.chat.id;
 
   if (!users[userId]) {
-    return res.status(400).json({ error: "User belum terdaftar" });
+    bot.sendMessage(chatId, "Ketik /start dulu");
+    return;
   }
 
-  const reward = Math.floor(Math.random() * 50) + 10;
-  users[userId].coins += reward;
+  const win = Math.random() > 0.5;
 
-  res.json({
-    reward,
-    coins: users[userId].coins
-  });
+  if (win) {
+    const gain = Math.floor(Math.random() * 500) + 200;
+    users[userId].chip += gain;
+    bot.sendMessage(chatId, `🎉 WIN!\n+${gain} Chip`);
+  } else {
+    const lose = Math.floor(Math.random() * 300) + 100;
+    users[userId].chip = Math.max(0, users[userId].chip - lose);
+    bot.sendMessage(chatId, `💀 LOSE!\n-${lose} Chip`);
+  }
 });
 
-app.get("/api/leaderboard", (req, res) => {
-  const leaderboard = Object.entries(users)
-    .map(([id, data]) => ({
-      userId: id,
-      coins: data.coins,
-      referrals: data.referrals
-    }))
-    .sort((a, b) => b.coins - a.coins)
-    .slice(0, 10);
+// /daily
+bot.onText(/\/daily/, (msg) => {
+  const userId = msg.from.id.toString();
+  const chatId = msg.chat.id;
+  const now = Date.now();
 
-  res.json(leaderboard);
+  if (now - users[userId].lastDaily < 86400000) {
+    bot.sendMessage(chatId, "⏳ Daily sudah diambil hari ini");
+    return;
+  }
+
+  users[userId].lastDaily = now;
+  users[userId].chip += 2000;
+
+  bot.sendMessage(chatId, "🎁 Daily reward +2000 Chip");
 });
 
-app.listen(PORT, () => {
-  console.log("Server jalan di port", PORT);
+// /ref
+bot.onText(/\/ref/, (msg) => {
+  const userId = msg.from.id.toString();
+  const link = `https://t.me/NamaBotKamu?start=${userId}`;
+
+  bot.sendMessage(msg.chat.id,
+`👥 Referral kamu:
+${link}
+
+🎁 Bonus: +500 Chip
+👤 Total referral: ${users[userId]?.refCount || 0}`);
+});
+
+// /leaderboard
+bot.onText(/\/leaderboard/, (msg) => {
+  const lb = Object.entries(users)
+    .sort((a, b) => b[1].chip - a[1].chip)
+    .slice(0, 5)
+    .map((u, i) => `${i+1}. ${u[0]} — ${u[1].chip} 💰`)
+    .join("\n");
+
+  bot.sendMessage(msg.chat.id,
+`🏆 LEADERBOARD\n\n${lb || "Belum ada data"}`);
 });
