@@ -5,7 +5,7 @@ console.log("FINAL BOT USERNAME =", BOT_USERNAME);
 
 const token = process.env.BOT_TOKEN;
 const BOT_NAME = process.env.BOT_NAME;
-const BOT_USERNAME = process.env.BOT_USERNAME;
+
 
 const bot = new TelegramBot(token, { polling: true });
 
