@@ -96,10 +96,11 @@ bot.onText(/\/daily/, (msg) => {
 bot.onText(/\/ref/, (msg) => {
   const userId = msg.from.id.toString();
 
-  if (!users[userId]) {
-    bot.sendMessage(msg.chat.id, "Ketik /start dulu");
-    return;
-  }
+  const link = `https://t.me/${BOT_USERNAME}?start=${userId}`;
+
+  bot.sendMessage(msg.chat.id, link);
+});
+
 
   // 🔍 CEK ENV
   console.log("BOT_USERNAME ENV =", process.env.BOT_USERNAME);
